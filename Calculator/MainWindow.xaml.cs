@@ -14,6 +14,7 @@ namespace Calculator
 
         public MainWindow()
         {
+            //Init
             InitializeComponent();
 
             // keyboard handlers
