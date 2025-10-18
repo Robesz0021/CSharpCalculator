@@ -46,12 +46,6 @@ Alternatively, if the project is an SDK-style .NET project you can use the CLI:
 
 (Refer to the project UI and code for exact supported keys and behaviors.)
 
-## Tests
-If the repository contains unit tests, run them with:
-    dotnet test
-
-Or run tests from Visual Studio using the __Test Explorer__.
-
 ## Contributing
 Contributions, issues and feature requests are welcome.
 - Create a fork, open a branch, and submit a pull request.
