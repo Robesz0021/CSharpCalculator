@@ -25,8 +25,8 @@ A simple calculator application implemented in C#. Provides a minimal, reliable 
 
 ## Build & run
 1. Clone the repository
-    git clone https://github.com/Robesz0021/CSharpCalculator
-    cd CSharpCalculator
+    git clone https://github.com/Robesz0021/Calculator
+    cd Calculator
 
 2. Open the solution in Visual Studio by double-clicking the `*.sln` file or via __File > Open > Project/Solution__.
 
