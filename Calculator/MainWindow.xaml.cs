@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace Calculator
 {
@@ -14,13 +15,108 @@ namespace Calculator
         public MainWindow()
         {
             InitializeComponent();
+
+            // keyboard handlers
+            this.PreviewKeyDown += MainWindow_PreviewKeyDown;
+            this.PreviewTextInput += MainWindow_PreviewTextInput;
         }
 
-        private void NumberButton_Click(object sender, RoutedEventArgs e)
+        // Textual input (gives the actual typed characters, good for + - * / % . , digits)
+        private void MainWindow_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
-            var btn = sender as Button;
-            if (btn == null) return;
-            var key = btn.Content?.ToString();
+            if (string.IsNullOrEmpty(e.Text)) return;
+            var ch = e.Text[0];
+
+            if (ch >= '0' && ch <= '9')
+            {
+                ProcessNumberInput(ch.ToString());
+                e.Handled = true;
+                return;
+            }
+
+            if (ch == '.' || ch == ',')
+            {
+                ProcessNumberInput(".");
+                e.Handled = true;
+                return;
+            }
+
+            switch (ch)
+            {
+                case '+':
+                case '-':
+                case '*':
+                case '/':
+                case '%':
+                    ProcessOperatorInput(ch.ToString());
+                    e.Handled = true;
+                    break;
+                case '=':
+                    ProcessEquals();
+                    e.Handled = true;
+                    break;
+            }
+        }
+
+        // Key strokes for non-text keys (Enter, Backspace, Delete, Escape, numpad operators)
+        private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+                case Key.Enter:
+                    ProcessEquals();
+                    e.Handled = true;
+                    break;
+                case Key.Back:
+                    ProcessBackspace();
+                    e.Handled = true;
+                    break;
+                case Key.Escape:
+                    ProcessClear();
+                    e.Handled = true;
+                    break;
+                case Key.Delete:
+                    ProcessClearEntry();
+                    e.Handled = true;
+                    break;
+                // numpad digits handled by PreviewTextInput as text in many cases, but map explicit keys too
+                case Key.Add:
+                    ProcessOperatorInput("+");
+                    e.Handled = true;
+                    break;
+                case Key.Subtract:
+                    ProcessOperatorInput("-");
+                    e.Handled = true;
+                    break;
+                case Key.Multiply:
+                    ProcessOperatorInput("*");
+                    e.Handled = true;
+                    break;
+                case Key.Divide:
+                    ProcessOperatorInput("/");
+                    e.Handled = true;
+                    break;
+                default:
+                    // handle main-row digits when PreviewTextInput not fired (rare)
+                    if (e.Key >= Key.D0 && e.Key <= Key.D9)
+                    {
+                        var num = (char)('0' + (e.Key - Key.D0));
+                        ProcessNumberInput(num.ToString());
+                        e.Handled = true;
+                    }
+                    else if (e.Key >= Key.NumPad0 && e.Key <= Key.NumPad9)
+                    {
+                        var num = (char)('0' + (e.Key - Key.NumPad0));
+                        ProcessNumberInput(num.ToString());
+                        e.Handled = true;
+                    }
+                    break;
+            }
+        }
+
+        // Helpers used by both keyboard and click handlers
+        private void ProcessNumberInput(string key)
+        {
             if (string.IsNullOrEmpty(key)) return;
 
             if (DisplayArea.Text == "Error" || isNewEntry && key != ".")
@@ -50,11 +146,8 @@ namespace Calculator
             }
         }
 
-        private void OperatorButton_Click(object sender, RoutedEventArgs e)
+        private void ProcessOperatorInput(string op)
         {
-            var btn = sender as Button;
-            if (btn == null) return;
-            var op = btn.Content?.ToString();
             if (string.IsNullOrEmpty(op)) return;
 
             double current;
@@ -79,7 +172,7 @@ namespace Calculator
             isNewEntry = true;
         }
 
-        private void EqualsButton_Click(object sender, RoutedEventArgs e)
+        private void ProcessEquals()
         {
             double current;
             if (!TryParseDisplay(out current)) return;
@@ -99,7 +192,7 @@ namespace Calculator
             }
         }
 
-        private void ClearButton_Click(object sender, RoutedEventArgs e)
+        private void ProcessClear()
         {
             accumulator = null;
             pendingOperator = null;
@@ -107,23 +200,13 @@ namespace Calculator
             DisplayArea.Text = "0";
         }
 
-        private void ClearEntryButton_Click(object sender, RoutedEventArgs e)
+        private void ProcessClearEntry()
         {
             isNewEntry = true;
             DisplayArea.Text = "0";
         }
 
-        private void PercentButton_Click(object sender, RoutedEventArgs e)
-        {
-            double current;
-            if (!TryParseDisplay(out current)) return;
-            var percent = current / 100.0;
-            SetDisplay(percent);
-            isNewEntry = true;
-        }
-
-        // Backspace: remove last character of the current entry
-        private void BackspaceButton_Click(object sender, RoutedEventArgs e)
+        private void ProcessBackspace()
         {
             if (DisplayArea.Text == "Error")
             {
@@ -132,7 +215,6 @@ namespace Calculator
                 return;
             }
 
-            // If a new entry is expected (just pressed operator or result shown), treat backspace as no-op or reset to 0
             if (isNewEntry)
             {
                 DisplayArea.Text = "0";
@@ -150,7 +232,6 @@ namespace Calculator
 
             text = text.Substring(0, text.Length - 1);
 
-            // If result is just a lone negative sign or empty, reset to 0
             if (string.IsNullOrEmpty(text) || text == "-")
             {
                 DisplayArea.Text = "0";
@@ -160,6 +241,55 @@ namespace Calculator
             {
                 DisplayArea.Text = text;
             }
+        }
+
+        // Existing click handlers now delegate to helpers (keep for XAML wiring)
+        private void NumberButton_Click(object sender, RoutedEventArgs e)
+        {
+            var btn = sender as Button;
+            if (btn == null) return;
+            var key = btn.Content?.ToString();
+            if (string.IsNullOrEmpty(key)) return;
+            ProcessNumberInput(key);
+        }
+
+        private void OperatorButton_Click(object sender, RoutedEventArgs e)
+        {
+            var btn = sender as Button;
+            if (btn == null) return;
+            var op = btn.Content?.ToString();
+            if (string.IsNullOrEmpty(op)) return;
+            ProcessOperatorInput(op);
+        }
+
+        private void EqualsButton_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessEquals();
+        }
+
+        private void ClearButton_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessClear();
+        }
+
+        private void ClearEntryButton_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessClearEntry();
+        }
+
+        private void PercentButton_Click(object sender, RoutedEventArgs e)
+        {
+            double current;
+            if (!TryParseDisplay(out current)) return;
+            var percent = current / 100.0;
+            SetDisplay(percent);
+            isNewEntry = true;
+        }
+
+        // Backspace click still delegates
+        private void BackspaceButton_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessBackspace();
         }
 
         private bool TryParseDisplay(out double value)
